@@ -1,6 +1,5 @@
 package de.admir
 
-import Context.ec
 import akka.actor.{Actor, Props}
 import scala.concurrent.duration._
 
@@ -11,9 +10,9 @@ class TransactionsStatisticActor(windowWidth: FiniteDuration, timeProvider: () =
   var transactionsWindow: Seq[Transaction] = Nil
   var transactionsStatistic: Option[TransactionStatistic] = None
 
-  context.system.scheduler.schedule(0.seconds, 1.nanosecond, self, UpdateStatistic)
+  override def preStart = self ! UpdateStatistic
 
-  def receive = {
+  override def receive = {
     case Add(transaction) =>
       if (isRelevant(transaction))
         transactionsWindow = transaction +: transactionsWindow
@@ -24,6 +23,7 @@ class TransactionsStatisticActor(windowWidth: FiniteDuration, timeProvider: () =
     case UpdateStatistic =>
       transactionsWindow = trimWindow(transactionsWindow)
       transactionsStatistic = extractStatistic(transactionsWindow)
+      self ! UpdateStatistic
 
     case msg =>
       println(s"Received unknown message: $msg")
