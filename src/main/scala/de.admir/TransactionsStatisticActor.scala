@@ -15,7 +15,8 @@ class TransactionsStatisticActor(windowWidth: FiniteDuration, timeProvider: () =
 
   def receive = {
     case Add(transaction) =>
-      transactionsWindow = transaction +: transactionsWindow
+      if (isRelevant(transaction))
+        transactionsWindow = transaction +: transactionsWindow
 
     case GetStatistic =>
       sender() ! transactionsStatistic
@@ -28,8 +29,11 @@ class TransactionsStatisticActor(windowWidth: FiniteDuration, timeProvider: () =
       println(s"Received unknown message: $msg")
   }
 
+  private def isRelevant(transaction: Transaction): Boolean =
+    transaction.timestamp > timeProvider() - windowWidth.toMillis
+
   private def trimWindow(transactionWindow: Seq[Transaction]): Seq[Transaction] =
-    transactionWindow.filter(transaction => transaction.timestamp > timeProvider() - windowWidth.toMillis)
+    transactionWindow.filter(isRelevant)
 
   private def extractStatistic(transactionWindow: Seq[Transaction]): Option[TransactionStatistic] = {
     transactionWindow match {
